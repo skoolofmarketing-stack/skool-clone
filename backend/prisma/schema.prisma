@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  avatar       String?
+  bio          String?
+  password     String
+  points       Int          @default(0)
+  level        Int          @default(1)
+  refreshToken String?
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  posts        Post[]
+  comments     Comment[]
+  likes        Like[]
+  enrollments  Enrollment[]
+  progress     Progress[]
+  courses      Course[]
+  pointLogs    PointLog[]
+  userBadges   UserBadge[]
+}
+
+model Community {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  description String?
+  image       String?
+  isPrivate   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  posts       Post[]
+  courses     Course[]
+}
+
+model Membership {
+  id          String    @id @default(uuid())
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  community   Community @relation(fields: [communityId], references: [id])
+  communityId String
+
+  @@unique([userId, communityId])
+}
+
+model Post {
+  id          String    @id @default(uuid())
+  title       String?
+  content     String
+  image       String?
+  createdAt   DateTime  @default(now())
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  community   Community @relation(fields: [communityId], references: [id])
+  communityId String
+  comments    Comment[]
+  likes       Like[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+  likes     Like[]
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  post      Post?    @relation(fields: [postId], references: [id])
+  postId    String?
+  comment   Comment? @relation(fields: [commentId], references: [id])
+  commentId String?
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+}
+
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  slug        String       @unique
+  description String?
+  thumbnail   String?
+  published   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  community   Community?   @relation(fields: [communityId], references: [id])
+  communityId String?
+  author      User         @relation(fields: [authorId], references: [id])
+  authorId    String
+  modules     Module[]
+  enrollments Enrollment[]
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id        String     @id @default(uuid())
+  title     String
+  content   String?
+  videoUrl  String?
+  duration  Int?
+  order     Int
+  createdAt DateTime   @default(now())
+  module    Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId  String
+  progress  Progress[]
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  enrolledAt  DateTime  @default(now())
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  course      Course    @relation(fields: [courseId], references: [id])
+  courseId    String
+
+  @@unique([userId, courseId])
+}
+
+model Progress {
+  id          String    @id @default(uuid())
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id])
+  lessonId    String
+
+  @@unique([userId, lessonId])
+}
+
+model PointLog {
+  id        String   @id @default(uuid())
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  icon        String
+  condition   String
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(uuid())
+  earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  badgeId  String
+
+  @@unique([userId, badgeId])
+}
